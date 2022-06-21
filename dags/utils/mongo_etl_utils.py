@@ -27,18 +27,6 @@ create_table_query = """
     
 # modeled as loading job
 def _load_platinum_customers_to_db(df): 
-    # import psycopg2
-    # connection = psycopg2.connect(user=Variable.get("POSTGRES_USER"),
-    #                               password=Variable.get("POSTGRES_PASSWORD"),
-    #                               host="remote_db",
-    #                               database=Variable.get("DB_NAME"))
-     
-    # cursor = connection.cursor()
-    # # Print PostgreSQL details
-    # print("PostgreSQL server information")
-    # print(connection.get_dsn_parameters(), "\n")
-
-
     import pymssql
     connection = pymssql.connect(server=f'{Variable.get("MSSQL_HOST")}', 
                                  user=f'{Variable.get("MSSQL_USER")}', 

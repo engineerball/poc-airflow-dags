@@ -8,7 +8,7 @@ from airflow.providers.mongo.hooks.mongo import MongoHook
 from datetime import datetime, timedelta
 
 from utils.etl_utils import *
-from utils.mongo_utils import client
+# from utils.mongo_utils import client
 
 default_args = {
     "owner": "Teerapat.k",
