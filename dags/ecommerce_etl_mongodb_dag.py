@@ -4,7 +4,7 @@ from airflow import DAG
 from airflow.operators.mssql_operator import MsSqlOperator 
 from airflow.operators.python import PythonOperator
 from airflow.utils.task_group import TaskGroup
-from utils.mongo_etl_utils import *
+from utils.etl_utils import *
 
 
 
@@ -21,8 +21,8 @@ default_args = {
 
 
 with DAG(
-    "MONGO_ETL_DAG", default_args=default_args,
-    schedule_interval=timedelta(hours=2)
+    "MONGODB_ETL_MSSQL", default_args=default_args,
+    schedule_interval=timedelta(hours=1)
 ) as dag:
 
     sample_base_filepath = "../data"
@@ -45,8 +45,9 @@ with DAG(
         mssql_conn_id='mssql_conn_id',
         task_id='create_table_platinum_customer_table',
         sql=create_table_query,
-        autocommit=True,
+        # autocommit=True,
         database=f'{Variable.get("MSSQL_DB")}',
+        dag=dag,
     )
 
     with TaskGroup("processing_group") as processing_group:

@@ -8,7 +8,6 @@ from airflow.providers.mongo.hooks.mongo import MongoHook
 from datetime import datetime, timedelta
 
 from utils.etl_utils import *
-# from utils.mongo_utils import client
 
 default_args = {
     "owner": "Teerapat.k",
@@ -18,11 +17,12 @@ default_args = {
     "email_on_failure": False,
     "email_on_retry": False,
     "retries": 3,
-    "retry_delay": timedelta(minutes=5),
+    "retry_delay": timedelta(minutes=10),
 }
 
 
 def save_data_to_mongo():
+    import pandas as pd
     transaction_data = pd.read_csv(os.path.join(file_root,'../data/transaction_lean_customer_data.csv'))
     user_data = pd.read_csv(os.path.join(file_root,'../data/user_lean_customer_data.csv'))
     product_data = pd.read_csv(os.path.join(file_root,'../data/product_lean_customer_data.csv'))
@@ -36,7 +36,7 @@ def save_to_mongo(collection, docs) -> object:
     return hook.insert_many(mongo_collection=collection, docs=docs, mongo_db='ecommerce') is not None
     
 
-with DAG('get_data_processing', schedule_interval=timedelta(minutes=5),
+with DAG('DATA_TO_MONGODB', schedule_interval=timedelta(minutes=5),
         default_args=default_args,
         catchup=False) as dag:
     

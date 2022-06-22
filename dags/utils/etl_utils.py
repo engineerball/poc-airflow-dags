@@ -1,89 +1,53 @@
-import pandas as pd
+# import pandas as pd
 import requests, os
-import numpy as np
-import psycopg2
+# import datetime
+# import numpy as np
+# import psycopg2
 from datetime import datetime, timedelta
 from airflow.models import Variable
 
 from airflow.providers.mongo.hooks.mongo import MongoHook
+from airflow.operators.mssql_operator import MsSqlOperator 
+from airflow.hooks.mssql_hook import MsSqlHook
+# from sqlalchemy import create_engine
+# from sqlalchemy.sql.type_api import Variant
 
-
-from sqlalchemy import create_engine
-from sqlalchemy.sql.type_api import Variant
-
-# from mongo_utils import client
 
 
 '''
 The faux data lake is to represent a cloud based storage like s3 or GCS
 '''
 file_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-create_table_query = """
-    CREATE TABLE IF NOT EXISTS platinum_customers(
+create_table_query = r"""
+    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'platinum_customers')
+        BEGIN
+            DROP TABLE platinum_customers
+        END
+    CREATE TABLE platinum_customers (
         user_id INTEGER PRIMARY KEY not null,
         total_purchase_value FLOAT not null,
-        timestamp date not null default CURRENT_DATE
+        timestamp DATETIME NULL DEFAULT GETDATE()
     )
     """
     
+
+def insert_mssql_hook(df):
+    mssql_hook = MsSqlHook(mssql_conn_id='mssql_conn_id', schema='ecommerce')
+    current_time = str(datetime.now())[0:-3]
+    rows = list([(x[0], x[1], str(current_time)) for x in df.values.tolist()])
+    target_fields = ['user_id', 'total_purchase_value', 'timestamp']
+    mssql_hook.insert_rows(table='platinum_customers', rows=rows, target_fields=target_fields)
     
-# modeled as loading job
-def _load_platinum_customers_to_db(df): 
-    connection = psycopg2.connect(user=Variable.get("POSTGRES_USER"),
-                                  password=Variable.get("POSTGRES_PASSWORD"),
-                                  host="remote_db",
-                                  database=Variable.get("DB_NAME"))
-
-     
-    cursor = connection.cursor()
-    # Print PostgreSQL details
-    print("PostgreSQL server information")
-    print(connection.get_dsn_parameters(), "\n")
-
-    
-
-
-    try:
-        con = create_engine(f'postgresql://{Variable.get("POSTGRES_USER")}:{Variable.get("POSTGRES_PASSWORD")}@remote_db:{Variable.get("DB_PORT")}/{Variable.get("DB_NAME")}')
-        df.to_sql("platinum_customers", con, index=False,if_exists='append')
-
-        
-    except (Exception) as error:
-        print("Error while connecting to PostgreSQL", error)
-    finally:
-        if connection:
-            cursor.close()
-            connection.close()
-            print("PostgreSQL connection is closed")
-    
-
-# modeled as extraction jobs
-
-def pull_user_data(): 
-    user_data = requests.get(f'{Variable.get("API_URL")}/users')
-    user_data = pd.DataFrame(user_data.json())
-    user_data.loc[:, "address"] = user_data["address"].apply(lambda x : x.replace('\n', ' '))
-    user_data.to_csv(os.path.join(file_root,'../data/user_lean_customer_data.csv'), index=False)
-
-def pull_product_data(): 
-    product_data = requests.get(f'{Variable.get("API_URL")}/products')
-    product_data = pd.DataFrame(product_data.json())
-    product_data.to_csv(os.path.join(file_root,'../data/product_lean_customer_data.csv'), index=False)
-
-def pull_transaction_data(): 
-    transaction_data = requests.get(f'{Variable.get("API_URL")}/transactions')
-    transaction_data = pd.DataFrame(transaction_data.json())
-    transaction_data.to_csv(os.path.join(file_root,'../data/transaction_lean_customer_data.csv'), index=False)
-
 # modeled as transformation jobs
 
 def get_platinum_customer(): 
     '''
     a platinum customer has purchased goods worth over 5000 
     '''
+    import pandas as pd
     transaction_data = pd.read_csv(os.path.join(file_root,'../data/mongo_transaction_lean_customer_data.csv'))
     user_data = pd.read_csv(os.path.join(file_root,'../data/mongo_user_lean_customer_data.csv'))
-    user_tx_data = pd.merge(user_data,transaction_data)
+    user_tx_data = pd.merge(user_data,transaction_data, left_on='user_id', right_on='user_id')
     # also need product lean_customer_data for product price
     product_data = pd.read_csv(os.path.join(file_root,'../data/mongo_product_lean_customer_data.csv'))
     product_data = product_data[['product_id','price','product_name']]
@@ -102,7 +66,8 @@ def get_platinum_customer():
     # save to csv file
     platinum_customers.to_csv(os.path.join(file_root,'../data/platinum_customers.csv'), index=False)
     # to database
-    _load_platinum_customers_to_db(platinum_customers)
+    # _load_platinum_customers_to_db(platinum_customers)
+    insert_mssql_hook(platinum_customers)
     
     
     # special case: FIND BIG SPENDER CUSTOMERS WITH TOTAL VALUE OF 5000 PER PRODUCT
@@ -124,7 +89,8 @@ def get_basket_analysis_dataset():
     '''
     group by purchase ID and store data
     '''
-    transaction_data = pd.read_csv(os.path.join(file_root,'../data/mongo_user_lean_customer_data.csv'))
+    import pandas as pd
+    transaction_data = pd.read_csv(os.path.join(file_root,'../data/mongo_transaction_lean_customer_data.csv'))
     transaction_data = transaction_data[['product_id','quantity','purchase_id']]
     # group to have unique purchase ID
     grouped_data = transaction_data.groupby(['purchase_id','product_id']).count().reset_index()
@@ -143,6 +109,8 @@ def get_recommendation_engine_dataset():
     '''
     group by user ID and send to data lake as dataset
     '''
+    import pandas as pd
+    import numpy as np
     transaction_data = pd.read_csv(os.path.join(file_root,'../data/mongo_transaction_lean_customer_data.csv'))
     transaction_data = transaction_data[['user_id','quantity','product_id']]
     # pivot to have user ID as index, product IDs as columns and quantity(sum) as the values
@@ -156,22 +124,6 @@ def get_recommendation_engine_dataset():
     transaction_data.to_csv(os.path.join(file_root,'../data/recommendation_engine_analysis.csv'), index=False)
     
 
-# def save_data_to_mongodb(): 
-#     '''
-#     a platinum customer has purchased goods worth over 5000 
-#     '''
-#     # sample_base_filepath = os.path.join(file_root, 'faux_data_lake') 
-#     # if not os.path.exists(sample_base_filepath):
-#     #     os.mkdir(sample_base_filepath)
-        
-#     transaction_data = pd.read_csv(os.path.join(file_root,'../data/transaction_lean_customer_data.csv'))
-#     user_data = pd.read_csv(os.path.join(file_root,'../data/user_lean_customer_data.csv'))
-#     # user_tx_data = pd.merge(user_data,transaction_data)
-#     # also need product lean_customer_data for product price
-#     product_data = pd.read_csv(os.path.join(file_root,'../data/product_lean_customer_data.csv'))
-#     # product_data = product_data[['product_id','price','product_name']]
-  
-  
 def pull_mongo_data(collection=str, min_ago=int): 
     hook = MongoHook(conn_id='mongodb_local_con_id')
     now = datetime.now()
@@ -183,28 +135,48 @@ def pull_mongo_data(collection=str, min_ago=int):
             ]
         }
     }
-    
+    # query = {}
     print(query)
     return hook.find(mongo_collection=collection, query=query, find_one=False, mongo_db="ecommerce")
 
 
-def pull_mongo_user_data(): 
-    user_data = pull_mongo_data("user", 1)
-    print(user_data)
+def pull_mongo_user_data():
+    import pandas as pd 
+    user_data = pull_mongo_data("user", 60)
     user_data = pd.DataFrame(list(user_data))
+    user_data.loc[:, "address"] = user_data["address"].apply(lambda x : x.replace('\n', ' '))
     user_data.to_csv(os.path.join(file_root,'../data/mongo_user_lean_customer_data.csv'), index=False)
 
 def pull_mongo_product_data(): 
-    product_data = pull_mongo_data("product", 1)
-    print(product_data)
+    import pandas as pd
+    product_data = pull_mongo_data("product", 60)
     product_data = pd.DataFrame(list(product_data))
     product_data.to_csv(os.path.join(file_root,'../data/mongo_product_lean_customer_data.csv'), index=False)
 
 def pull_mongo_transaction_data(): 
-    transaction_data = pull_mongo_data("transaction", 1)
-    print(transaction_data)
+    import pandas as pd
+    transaction_data = pull_mongo_data("transaction", 60)
     transaction_data = pd.DataFrame(list(transaction_data))
     transaction_data.to_csv(os.path.join(file_root,'../data/mongo_transaction_lean_customer_data.csv'), index=False)
 
+
+def pull_user_data(): 
+    import pandas as pd
+    user_data = requests.get(f'{Variable.get("API_URL")}/users')
+    user_data = pd.DataFrame(user_data.json())
+    user_data.loc[:, "address"] = user_data["address"].apply(lambda x : x.replace('\n', ' '))
+    user_data.to_csv(os.path.join(file_root,'../data/user_lean_customer_data.csv'), index=False)
+
+def pull_product_data(): 
+    import pandas as pd
+    product_data = requests.get(f'{Variable.get("API_URL")}/products')
+    product_data = pd.DataFrame(product_data.json())
+    product_data.to_csv(os.path.join(file_root,'../data/product_lean_customer_data.csv'), index=False)
+
+def pull_transaction_data():
+    import pandas as pd 
+    transaction_data = requests.get(f'{Variable.get("API_URL")}/transactions')
+    transaction_data = pd.DataFrame(transaction_data.json())
+    transaction_data.to_csv(os.path.join(file_root,'../data/transaction_lean_customer_data.csv'), index=False)
 
 print(file_root)
