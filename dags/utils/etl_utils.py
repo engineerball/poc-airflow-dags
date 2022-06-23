@@ -45,11 +45,11 @@ def get_platinum_customer():
     a platinum customer has purchased goods worth over 5000 
     '''
     import pandas as pd
-    transaction_data = pd.read_csv(os.path.join(file_root,'../data/mongo_transaction_lean_customer_data.csv'))
-    user_data = pd.read_csv(os.path.join(file_root,'../data/mongo_user_lean_customer_data.csv'))
+    transaction_data = pd.read_csv('/tmp/mongo_transaction_lean_customer_data.csv')
+    user_data = pd.read_csv('/tmp/mongo_user_lean_customer_data.csv')
     user_tx_data = pd.merge(user_data,transaction_data, left_on='user_id', right_on='user_id')
     # also need product lean_customer_data for product price
-    product_data = pd.read_csv(os.path.join(file_root,'../data/mongo_product_lean_customer_data.csv'))
+    product_data = pd.read_csv('/tmp/mongo_product_lean_customer_data.csv')
     product_data = product_data[['product_id','price','product_name']]
     
     enriched_customer_data = pd.merge(user_tx_data,product_data)
@@ -64,7 +64,7 @@ def get_platinum_customer():
     # filter platinum customers PREDICATE: total_purchase_value>=10000
     platinum_customers = lean_customer_data.loc[lean_customer_data['total_purchase_value'] >= 10000]
     # save to csv file
-    platinum_customers.to_csv(os.path.join(file_root,'../data/platinum_customers.csv'), index=False)
+    platinum_customers.to_csv('/tmp/platinum_customers.csv', index=False)
     # to database
     # _load_platinum_customers_to_db(platinum_customers)
     insert_mssql_hook(platinum_customers)
@@ -81,7 +81,7 @@ def get_platinum_customer():
     
     special_customers = special_customer_data.loc[special_customer_data['total_purchase_value'] >= 5000]
     # save to csv file
-    special_customers.to_csv(os.path.join(file_root,'../data/platinum_customers_per_product.csv'), index=False)
+    special_customers.to_csv('/tmp/platinum_customers_per_product.csv', index=False)
     
     
     
@@ -90,7 +90,7 @@ def get_basket_analysis_dataset():
     group by purchase ID and store data
     '''
     import pandas as pd
-    transaction_data = pd.read_csv(os.path.join(file_root,'../data/mongo_transaction_lean_customer_data.csv'))
+    transaction_data = pd.read_csv('/tmp/mongo_transaction_lean_customer_data.csv')
     transaction_data = transaction_data[['product_id','quantity','purchase_id']]
     # group to have unique purchase ID
     grouped_data = transaction_data.groupby(['purchase_id','product_id']).count().reset_index()
@@ -102,7 +102,7 @@ def get_basket_analysis_dataset():
                    fill_value=0, # empty values that may arise from pivoting
                    ).add_suffix('_product_id')
     
-    grouped_data.to_csv(os.path.join(file_root,'../data/basket_analysis.csv'), index=False)
+    grouped_data.to_csv('/tmp/basket_analysis.csv', index=False)
 
 
 def get_recommendation_engine_dataset(): 
@@ -111,7 +111,7 @@ def get_recommendation_engine_dataset():
     '''
     import pandas as pd
     import numpy as np
-    transaction_data = pd.read_csv(os.path.join(file_root,'../data/mongo_transaction_lean_customer_data.csv'))
+    transaction_data = pd.read_csv('/tmp/mongo_transaction_lean_customer_data.csv')
     transaction_data = transaction_data[['user_id','quantity','product_id']]
     # pivot to have user ID as index, product IDs as columns and quantity(sum) as the values
     # for recommendation engines, it may be critical to know what kind of products are bought in large quantities over time
@@ -121,7 +121,7 @@ def get_recommendation_engine_dataset():
                    fill_value=0,
                    aggfunc=np.sum).add_suffix('_product_id')
     
-    transaction_data.to_csv(os.path.join(file_root,'../data/recommendation_engine_analysis.csv'), index=False)
+    transaction_data.to_csv('/tmp/recommendation_engine_analysis.csv', index=False)
     
 
 def pull_mongo_data(collection=str, min_ago=int): 
@@ -145,19 +145,19 @@ def pull_mongo_user_data():
     user_data = pull_mongo_data("user", 60)
     user_data = pd.DataFrame(list(user_data))
     user_data.loc[:, "address"] = user_data["address"].apply(lambda x : x.replace('\n', ' '))
-    user_data.to_csv(os.path.join(file_root,'../data/mongo_user_lean_customer_data.csv'), index=False)
+    user_data.to_csv('/tmp/mongo_user_lean_customer_data.csv', index=False)
 
 def pull_mongo_product_data(): 
     import pandas as pd
     product_data = pull_mongo_data("product", 60)
     product_data = pd.DataFrame(list(product_data))
-    product_data.to_csv(os.path.join(file_root,'../data/mongo_product_lean_customer_data.csv'), index=False)
+    product_data.to_csv('/tmp/mongo_product_lean_customer_data.csv', index=False)
 
 def pull_mongo_transaction_data(): 
     import pandas as pd
     transaction_data = pull_mongo_data("transaction", 60)
     transaction_data = pd.DataFrame(list(transaction_data))
-    transaction_data.to_csv(os.path.join(file_root,'../data/mongo_transaction_lean_customer_data.csv'), index=False)
+    transaction_data.to_csv('/tmp/mongo_transaction_lean_customer_data.csv', index=False)
 
 
 def pull_user_data(): 
@@ -165,18 +165,18 @@ def pull_user_data():
     user_data = requests.get(f'{Variable.get("API_URL")}/users')
     user_data = pd.DataFrame(user_data.json())
     user_data.loc[:, "address"] = user_data["address"].apply(lambda x : x.replace('\n', ' '))
-    user_data.to_csv(os.path.join(file_root,'../data/user_lean_customer_data.csv'), index=False)
+    user_data.to_csv('/tmp/user_lean_customer_data.csv', index=False)
 
 def pull_product_data(): 
     import pandas as pd
     product_data = requests.get(f'{Variable.get("API_URL")}/products')
     product_data = pd.DataFrame(product_data.json())
-    product_data.to_csv(os.path.join(file_root,'../data/product_lean_customer_data.csv'), index=False)
+    product_data.to_csv('/tmp/product_lean_customer_data.csv', index=False)
 
 def pull_transaction_data():
     import pandas as pd 
     transaction_data = requests.get(f'{Variable.get("API_URL")}/transactions')
     transaction_data = pd.DataFrame(transaction_data.json())
-    transaction_data.to_csv(os.path.join(file_root,'../data/transaction_lean_customer_data.csv'), index=False)
+    transaction_data.to_csv('/tmp/transaction_lean_customer_data.csv', index=False)
 
 print(file_root)

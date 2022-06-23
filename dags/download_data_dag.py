@@ -23,9 +23,9 @@ default_args = {
 
 def save_data_to_mongo():
     import pandas as pd
-    transaction_data = pd.read_csv(os.path.join(file_root,'../data/transaction_lean_customer_data.csv'))
-    user_data = pd.read_csv(os.path.join(file_root,'../data/user_lean_customer_data.csv'))
-    product_data = pd.read_csv(os.path.join(file_root,'../data/product_lean_customer_data.csv'))
+    transaction_data = pd.read_csv('/tmp/transaction_lean_customer_data.csv')
+    user_data = pd.read_csv('/tmp/user_lean_customer_data.csv')
+    product_data = pd.read_csv('/tmp/product_lean_customer_data.csv')
     
     return save_to_mongo("transaction", transaction_data.to_dict(orient="records")) and save_to_mongo("user", user_data.to_dict(orient="records")) and save_to_mongo("product", product_data.to_dict(orient="records")) is not None
     
