@@ -36,7 +36,7 @@ def save_to_mongo(collection, docs) -> object:
     return hook.insert_many(mongo_collection=collection, docs=docs, mongo_db='ecommerce') is not None
     
 
-with DAG('DATA_TO_MONGODB', schedule_interval=timedelta(minutes=5),
+with DAG('DATA_TO_MONGODB', schedule_interval=timedelta(minutes=10),
         default_args=default_args,
         catchup=False) as dag:
     

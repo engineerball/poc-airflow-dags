@@ -142,20 +142,20 @@ def pull_mongo_data(collection=str, min_ago=int):
 
 def pull_mongo_user_data():
     import pandas as pd 
-    user_data = pull_mongo_data("user", 60)
+    user_data = pull_mongo_data("user", 120)
     user_data = pd.DataFrame(list(user_data))
     user_data.loc[:, "address"] = user_data["address"].apply(lambda x : x.replace('\n', ' '))
     user_data.to_csv('/tmp/mongo_user_lean_customer_data.csv', index=False)
 
 def pull_mongo_product_data(): 
     import pandas as pd
-    product_data = pull_mongo_data("product", 60)
+    product_data = pull_mongo_data("product", 120)
     product_data = pd.DataFrame(list(product_data))
     product_data.to_csv('/tmp/mongo_product_lean_customer_data.csv', index=False)
 
 def pull_mongo_transaction_data(): 
     import pandas as pd
-    transaction_data = pull_mongo_data("transaction", 60)
+    transaction_data = pull_mongo_data("transaction", 120)
     transaction_data = pd.DataFrame(list(transaction_data))
     transaction_data.to_csv('/tmp/mongo_transaction_lean_customer_data.csv', index=False)
 
