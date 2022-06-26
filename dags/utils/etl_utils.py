@@ -35,7 +35,7 @@ create_table_query = r"""
         END
     CREATE TABLE platinum_customers_per_product (
         user_id INTEGER not null,
-        product_name TINYTEXT not null,
+        product_name VARCHAR(255) not null,
         total_purchase_value FLOAT not null,
         timestamp DATETIME NULL DEFAULT GETDATE()
     )
