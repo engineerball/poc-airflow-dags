@@ -51,13 +51,13 @@ with DAG(
     )
 
     with TaskGroup("processing_group") as processing_group:
-        generate_basket_analysis_csv_task = PythonOperator(
-            task_id="generate_basket_analysis_csv_task",
+        generate_basket_analysis_task = PythonOperator(
+            task_id="generate_basket_analysis_task",
             python_callable=get_basket_analysis_dataset,
         )
 
-        generate_recommendation_engine_csv_task = PythonOperator(
-            task_id="generate_recommendation_engine_csv_task",
+        generate_recommendation_engine_task = PythonOperator(
+            task_id="generate_recommendation_engine_task",
             python_callable=get_recommendation_engine_dataset,
         )
 
