@@ -28,15 +28,28 @@ create_table_query = r"""
         total_purchase_value FLOAT not null,
         timestamp DATETIME NULL DEFAULT GETDATE()
     )
+    
+    IF EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = N'platinum_customers_per_product')
+        BEGIN
+            DROP TABLE platinum_customers_per_product
+        END
+    CREATE TABLE platinum_customers_per_product (
+        user_id INTEGER PRIMARY KEY not null,
+        product_name VARCHAR not null,
+        total_purchase_value FLOAT not null,
+        timestamp DATETIME NULL DEFAULT GETDATE()
+    )
     """
     
 
-def insert_mssql_hook(df):
+def insert_mssql_hook(df, db_name=str, target_fields=list):
     mssql_hook = MsSqlHook(mssql_conn_id='mssql_conn_id', schema='ecommerce')
     current_time = str(datetime.now())[0:-3]
     rows = list([(x[0], x[1], str(current_time)) for x in df.values.tolist()])
-    target_fields = ['user_id', 'total_purchase_value', 'timestamp']
-    mssql_hook.insert_rows(table='platinum_customers', rows=rows, target_fields=target_fields)
+    # target_fields = ['user_id', 'total_purchase_value', 'timestamp']
+    # target_fields = columns
+    # mssql_hook.insert_rows(table='platinum_customers', rows=rows, target_fields=target_fields)
+    mssql_hook.insert_rows(table=db_name, rows=rows, target_fields=target_fields)
     
 # modeled as transformation jobs
 
@@ -67,7 +80,8 @@ def get_platinum_customer():
     platinum_customers.to_csv('/tmp/platinum_customers.csv', index=False)
     # to database
     # _load_platinum_customers_to_db(platinum_customers)
-    insert_mssql_hook(platinum_customers)
+    target_columns = ['user_id', 'total_purchase_value', 'timestamp']
+    insert_mssql_hook(platinum_customers, 'platinum_customers', target_columns)
     
     
     # special case: FIND BIG SPENDER CUSTOMERS WITH TOTAL VALUE OF 5000 PER PRODUCT
@@ -82,6 +96,8 @@ def get_platinum_customer():
     special_customers = special_customer_data.loc[special_customer_data['total_purchase_value'] >= 5000]
     # save to csv file
     special_customers.to_csv('/tmp/platinum_customers_per_product.csv', index=False)
+    target_columns = ['user_id','product_name','total_purchase_value', 'timestamp']
+    insert_mssql_hook(special_customers, 'platinum_customers_per_product', target_columns)
     
     
     
