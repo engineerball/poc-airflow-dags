@@ -34,7 +34,7 @@ create_table_query = r"""
             DROP TABLE platinum_customers_per_product
         END
     CREATE TABLE platinum_customers_per_product (
-        user_id INTEGER PRIMARY KEY not null,
+        user_id INTEGER not null,
         product_name VARCHAR not null,
         total_purchase_value FLOAT not null,
         timestamp DATETIME NULL DEFAULT GETDATE()
