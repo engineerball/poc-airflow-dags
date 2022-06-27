@@ -61,8 +61,8 @@ with DAG(
             python_callable=get_recommendation_engine_dataset,
         )
 
-        get_platinum_customer_task = PythonOperator(
-            task_id="get_platinum_customer_task",
+        generate_platinum_customer_task = PythonOperator(
+            task_id="generate_platinum_customer_task",
             python_callable=get_platinum_customer)
 
 
