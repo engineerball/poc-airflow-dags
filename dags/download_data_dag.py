@@ -10,7 +10,7 @@ from datetime import datetime, timedelta
 from utils.etl_utils import *
 
 default_args = {
-    "owner": "Teerapat.k",
+    "owner": "tk",
     "depends_on_past": False,
     "start_date": datetime(2022, 6, 11),
     "email": ["tk@aiqube.co"],

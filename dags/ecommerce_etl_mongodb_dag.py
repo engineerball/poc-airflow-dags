@@ -9,7 +9,7 @@ from utils.etl_utils import *
 
 
 default_args = {
-    "owner": "airflow",
+    "owner": "tk",
     "depends_on_past": False,
     "start_date": datetime(2022, 6, 20),
     "email": ["tk@aiqube.co"],
